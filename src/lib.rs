@@ -1,7 +1,8 @@
 extern crate rand;
 
-use rand::Rng;
+use rand::{Rng, thread_rng};
 
+#[cfg(test)]
 mod tests {
     use super::SecretData;
     #[test]
@@ -84,7 +85,7 @@ pub struct SecretData {
 impl SecretData {
     pub fn with_secret(secret: &str, threshold: u8) -> SecretData {
         let mut coefficients: Vec<Vec<u8>> = vec![];
-        let mut rng = rand::thread_rng();
+        let mut rng = thread_rng();
         let mut rand_container = [0u8, threshold - 1];
         for c in secret.as_bytes() {
             rng.fill_bytes(&mut rand_container);
@@ -256,6 +257,7 @@ impl SecretData {
         }
     }
 
+    #[inline]
     fn multiply_polynomials(a: &Vec<u8>, b: &Vec<u8>) -> Vec<u8> {
         let mut resultterms: Vec<u8> = vec![];
 
@@ -272,6 +274,7 @@ impl SecretData {
         resultterms
     }
 
+    #[inline]
     fn add_polynomials(a: &Vec<u8>, b: &Vec<u8>) -> Vec<u8> {
         let mut a = a.clone();
         let mut b = b.clone();

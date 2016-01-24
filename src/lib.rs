@@ -56,25 +56,44 @@ mod tests {
 
         let new_secret = SecretData::recover_secret(3, vec![s1, s2, s3]).unwrap();
 
-        assert_eq!(&new_secret[..], "Hello, World!");
+        assert_eq!(&new_secret[..], "Hello World!");
+    }
+
+    #[test]
+    fn it_can_recover_a_generated_secret() {
+        let secret_data = SecretData::with_secret(&"Hello, world!"[..], 3);
+
+        let s1 = secret_data.get_share(1);
+        println!("s1: {:?}", s1);
+        let s2 = secret_data.get_share(2);
+        println!("s2: {:?}", s2);
+        let s3 = secret_data.get_share(3);
+        println!("s3: {:?}", s3);
+
+        let new_secret = SecretData::recover_secret(3, vec![s1, s2, s3]).unwrap();
+
+        assert_eq!(&new_secret[..], "Hello, world!");
     }
 }
 
 pub struct SecretData {
     // threshold: u8,
     pub secret_data: Option<String>,
-    pub coefficients: Vec<String>,
+    pub coefficients: Vec<Vec<u8>>,
 }
 
 impl SecretData {
     pub fn with_secret(secret: &str, threshold: u8) -> SecretData {
-        let mut coefficients: Vec<String> = vec![];
+        let mut coefficients: Vec<Vec<u8>> = vec![];
         let mut rng = rand::thread_rng();
         let mut rand_container = [0u8, threshold - 1];
-
         for c in secret.as_bytes() {
             rng.fill_bytes(&mut rand_container);
-            coefficients.push(format!("{}{}", c,String::from_utf8_lossy(&rand_container)));
+            let mut coef: Vec<u8> = vec![*c];
+            for r in rand_container.iter() {
+                coef.push(*r);
+            }
+            coefficients.push(coef);
         }
 
         SecretData {
@@ -106,20 +125,20 @@ impl SecretData {
 
     pub fn recover_secret(threshold: u8, shares: Vec<Vec<u8>>) -> Option<String> {
         if threshold as usize > shares.len() {
-            // return None;
-            panic!("Number of shares is below the threshold");
+            println!("Number of shares is below the threshold");
+            return None;
         }
         let mut xs: Vec<u8> = vec![];
 
         for share in shares.iter() {
             if xs.contains(&share[0]) {
-                // return None;
-                panic!("Multiple shares with the same first byte");
+                println!("Multiple shares with the same first byte");
+                return None;
             }
 
             if share.len() != shares[0].len() {
-                // return None;
-                panic!("Shares have different lengths");
+                println!("Shares have different lengths");
+                return None;
             }
 
             xs.push(share[0].clone());
@@ -130,9 +149,8 @@ impl SecretData {
         let mut mysecretdata: Vec<u8> = vec![];
         let rounds = shares[0].len() - 1;
 
-        let mut fxs: Vec<u8> = vec![];
         for byte_to_use in 0..rounds {
-            fxs = vec![];
+            let mut fxs: Vec<u8> = vec![];
             for share in shares.clone() {
                 fxs.push(share[1..][byte_to_use].clone());
             }
@@ -152,7 +170,7 @@ impl SecretData {
             mycoefficients.push(String::from_utf8_lossy(&resulting_poly[..]).to_string());
             mysecretdata.push(resulting_poly[0]);
         }
-        return Some(String::from_utf8_lossy(&mysecretdata[..]).to_string());
+
         match String::from_utf8(mysecretdata) {
             Ok(s) => Some(s),
             Err(e) => {
@@ -163,7 +181,7 @@ impl SecretData {
         // Some(mysecretdata)
     }
 
-    fn accumulate_share_bytes(id: u8, coefficient_bytes: String) -> u8 {
+    fn accumulate_share_bytes(id: u8, coefficient_bytes: Vec<u8>) -> u8 {
         if id < 1 { // Don't need to check for id > 255 because u8 can't be
             panic!("share id must be between 1 and 255");
         }
@@ -171,8 +189,8 @@ impl SecretData {
 
         let mut x_i: u8 = 1;
 
-        for c in coefficient_bytes.as_bytes() {
-            accumulator = SecretData::gf256_add(&accumulator, &SecretData::gf256_mul(c, &x_i));
+        for c in coefficient_bytes {
+            accumulator = SecretData::gf256_add(&accumulator, &SecretData::gf256_mul(&c, &x_i));
             x_i = SecretData::gf256_mul(&x_i, &id);
         }
 

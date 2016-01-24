@@ -1,6 +1,6 @@
 [package]
 name = "shamir"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Chris MacNaughton <chmacnaughton@gmail.com>"]
 license = "MIT"
 

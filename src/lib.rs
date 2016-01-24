@@ -1,9 +1,9 @@
 extern crate rand;
 
-use rand::{ Rng, OsRng };
+use rand::{ Rng };
 
 mod tests {
-    use super::*;
+    use super::SecretData;
     #[test]
     fn it_works() {
     }
@@ -18,27 +18,46 @@ mod tests {
     #[should_panic]
     fn it_rejects_share_id_under_1() {
         let secret_data = SecretData::with_secret(&"Hello, world!"[..], 3);
-        let s1 = secret_data.share(0);
+        let _ = secret_data.get_share(0);
     }
 
-    #[test]
-    #[should_panic]
-    fn it_rejects_share_id_over_255() {
-        let secret_data = SecretData::with_secret(&"Hello, world!"[..], 3);
-        let s1 = secret_data.share(256);
-    }
     #[test]
     fn it_issues_shares() {
         let secret_data = SecretData::with_secret(&"Hello, world!"[..], 3);
 
-        let s1 = secret_data.share(1);
+        let s1 = secret_data.get_share(1);
         println!("Share: {:?}", s1);
-        assert!(secret_data.is_valid_share(1, s1));
+        assert!(secret_data.is_valid_share(&s1));
+    }
+
+    #[test]
+    fn it_repeatedly_issues_shares() {
+        let secret_data = SecretData::with_secret(&"Hello, world!"[..], 3);
+
+        let s1 = secret_data.get_share(1);
+        println!("Share: {:?}", s1);
+        assert!(secret_data.is_valid_share(&s1));
+
+        let s2 = secret_data.get_share(1);
+        assert_eq!(s1, s2);
+    }
+
+    #[test]
+    fn it_can_recover_secret() {
+        let secret_data = SecretData::with_secret(&"Hello, world!"[..], 3);
+
+        let s1 = secret_data.get_share(1);
+        let s2 = secret_data.get_share(2);
+        let s3 = secret_data.get_share(3);
+
+        let new_secret = SecretData::recover_secret(3, vec![s1, s2, s3]).unwrap();
+
+        assert_eq!(&new_secret[..], "Hello, World");
     }
 }
 
 pub struct SecretData {
-    threshold: u8,
+    // threshold: u8,
     pub secret_data: Option<String>,
     pub coefficients: Vec<String>,
 }
@@ -56,13 +75,13 @@ impl SecretData {
 
         SecretData {
             secret_data: Some(secret.to_string()),
-            threshold: threshold,
+            // threshold: threshold,
             coefficients: coefficients,
         }
     }
 
-    pub fn share(&self, id: u8) -> Vec<u8> {
-        if id < 1 || id > 255 {
+    pub fn get_share(&self, id: u8) -> Vec<u8> {
+        if id < 1 { // Don't need to check for id > 255 because u8 can't be
             panic!("share id must be between 1 and 255");
         }
         let mut share_bytes: Vec<u8> = vec![];
@@ -71,15 +90,38 @@ impl SecretData {
             share_bytes.push(SecretData::accumulate_share_bytes(id, coefficient));
         }
 
+        share_bytes.insert(0, id);
         share_bytes
     }
 
-    pub fn is_valid_share( &self, id: u8, share: Vec<u8> ) -> bool {
-        share == self.share(id)
+    pub fn is_valid_share( &self, share: &Vec<u8> ) -> bool {
+        let id = share[0];
+        // let share2 = share[1..];
+        *share == self.get_share(id)
+    }
+
+    pub fn recover_secret(threshold: u8, shares: Vec<Vec<u8>>) -> Option<String> {
+        if threshold as usize > shares.len() {
+            return None;
+        }
+        let mut xs: Vec<u8> = vec![];
+
+        for share in shares.iter() {
+            if xs.contains(&share[0]) {
+                return None;
+            }
+
+            if share.len() != shares[0].len() {
+                return None;
+            }
+
+            xs.push(share[0].clone());
+        }
+        Some("".to_string())
     }
 
     fn accumulate_share_bytes(id: u8, coefficient_bytes: String) -> u8 {
-        if id < 1 || id > 255 {
+        if id < 1 { // Don't need to check for id > 255 because u8 can't be
             panic!("share id must be between 1 and 255");
         }
         let mut accumulator: u8 = 0;
@@ -109,7 +151,8 @@ impl SecretData {
 
             // let val = GF256_EXP.get( usize::from((a2 + b2) % 255) ).unwrap().clone();
             // val
-            GF256_EXP[( (GF256_LOG[*a as usize] + GF256_LOG[*b as usize]) % 255) as usize]
+            // let idx: u16 = ;
+            GF256_EXP[( (GF256_LOG[*a as usize] as u16 + GF256_LOG[*b as usize] as u16) % 255) as usize]
         }
     }
 }

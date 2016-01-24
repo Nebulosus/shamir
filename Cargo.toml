@@ -2,6 +2,7 @@
 name = "shamir"
 version = "1.0.0"
 authors = ["Chris MacNaughton <chmacnaughton@gmail.com>"]
+description = "Shamir is a pure Rust implementation of Shamir's secret sharing"
 license = "MIT"
 
 [dependencies]

@@ -1,5 +1,8 @@
 # Shamir
 
+[![Coverage Status](https://img.shields.io/coveralls/Nebulosus/shamir.svg?style=flat-square)](https://coveralls.io/github/Nebulosus/shamir)
+[![Build](https://img.shields.io/travis-ci/Nebulosus/shamir.svg?style=flat-square)](https://travis-ci.org/Nebulosus/shamir)
+
 Shamir is a pure Rust implementation of [Shamir's secret sharing][shamirs].
 
 [shamirs]: https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing

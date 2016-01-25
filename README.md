@@ -34,7 +34,7 @@ extern crate shamir;
 use shamir::SecretData;
 
 fn main() {
-    let secret_data = SecretData::with_secret(&"Hello World!"[..], 3);
+    let secret_data = SecretData::with_secret("Hello World!", 3);
 
     let share1 = secret_data.get_share(1);
     let share2 = secret_data.get_share(2);

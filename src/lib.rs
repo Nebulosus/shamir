@@ -10,20 +10,20 @@ mod tests {
 
     #[test]
     fn it_generates_coefficients() {
-        let secret_data = SecretData::with_secret(&"Hello, world!"[..], 3);
+        let secret_data = SecretData::with_secret("Hello, world!", 3);
         assert_eq!(secret_data.coefficients.len(), 13);
     }
 
     #[test]
     #[should_panic]
     fn it_rejects_share_id_under_1() {
-        let secret_data = SecretData::with_secret(&"Hello, world!"[..], 3);
+        let secret_data = SecretData::with_secret("Hello, world!", 3);
         let _ = secret_data.get_share(0);
     }
 
     #[test]
     fn it_issues_shares() {
-        let secret_data = SecretData::with_secret(&"Hello, world!"[..], 3);
+        let secret_data = SecretData::with_secret("Hello, world!", 3);
 
         let s1 = secret_data.get_share(1);
         println!("Share: {:?}", s1);
@@ -32,7 +32,7 @@ mod tests {
 
     #[test]
     fn it_repeatedly_issues_shares() {
-        let secret_data = SecretData::with_secret(&"Hello, world!"[..], 3);
+        let secret_data = SecretData::with_secret("Hello, world!", 3);
 
         let s1 = secret_data.get_share(1);
         println!("Share: {:?}", s1);
@@ -44,7 +44,7 @@ mod tests {
 
     #[test]
     fn it_can_recover_secret() {
-        // let secret_data = SecretData::with_secret(&"Hello, world!"[..], 3);
+        // let secret_data = SecretData::with_secret("Hello, world!", 3);
 
         // let s1 = secret_data.get_share(1);
         // let s2 = secret_data.get_share(2);
@@ -61,7 +61,7 @@ mod tests {
 
     #[test]
     fn it_can_recover_a_generated_secret() {
-        let secret_data = SecretData::with_secret(&"Hello, world!"[..], 3);
+        let secret_data = SecretData::with_secret("Hello, world!", 3);
 
         let s1 = secret_data.get_share(1);
         println!("s1: {:?}", s1);

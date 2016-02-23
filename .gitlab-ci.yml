@@ -1,0 +1,49 @@
+image: ubuntu:vivid
+
+before_script:
+  - apt-get update
+  - apt-get install -y curl file build-essential libssl-dev
+
+cache:
+  untracked: true
+  key: "$CI_BUILD_NAME"
+  paths:
+    - $HOME/.cargo
+    - $CI_PROJECT_DIR/target
+
+stages:
+  - test
+  - publish
+
+test-stable:
+  script:
+    - curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- -y --disable-sudo
+    - cargo build --release --verbose
+    - cargo test --verbose
+
+test-beta:
+  allow_failure: true
+  script:
+    - curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- -y --disable-sudo --channel=beta
+    - cargo build --release --verbose
+    - cargo test --verbose
+
+test-nightly:
+  allow_failure: true
+  script:
+    - curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- -y --disable-sudo --channel=nightly
+    - cargo build --release --verbose
+    - cargo test --verbose
+
+
+publish:
+  stage: publish
+  only:
+    - tags
+  script:
+    - curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- -y --disable-sudo
+    - cargo build --release --verbose
+    - cargo test --verbose
+    - cargo package --verbose
+    - cargo doc --verbose
+    - cargo publish --token "$CRATES_IO_TOKEN"

@@ -41,7 +41,6 @@ publish:
     - tags
   script:
     - curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- -y --disable-sudo
-    - mv Cargo.toml.new Cargo.toml
     - cargo build --release --verbose
     - cargo test --verbose
     - cargo package --verbose

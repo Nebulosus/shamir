@@ -3,6 +3,7 @@ image: ubuntu:vivid
 before_script:
   - apt-get update
   - apt-get install -y curl file build-essential libssl-dev
+  - pip install 'travis-cargo<0.2' --user && export PATH=$HOME/.local/bin:$PATH
 
 cache:
   untracked: true
@@ -13,27 +14,31 @@ cache:
 
 stages:
   - test
+  - coverage
   - publish
 
 test-stable:
   script:
     - curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- -y --disable-sudo
-    - cargo build --release --verbose
-    - cargo test --verbose
+    - travis-cargo build & travis-cargo test
 
 test-beta:
   allow_failure: true
   script:
     - curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- -y --disable-sudo --channel=beta
-    - cargo build --release --verbose
-    - cargo test --verbose
+    - travis-cargo build & travis-cargo test
 
 test-nightly:
   allow_failure: true
   script:
     - curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- -y --disable-sudo --channel=nightly
-    - cargo build --release --verbose
-    - cargo test --verbose
+    - travis-cargo build & travis-cargo test
+
+
+coverage:
+  script:
+    - curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- -y --disable-sudo
+    - travis-cargo coveralls --no-sudo
 
 
 publish:

@@ -36,6 +36,7 @@ test-nightly:
 
 
 coverage:
+  stage: coverage
   script:
     - curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- -y --disable-sudo
     - travis-cargo coveralls --no-sudo

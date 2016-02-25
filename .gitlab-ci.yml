@@ -2,7 +2,7 @@ image: ubuntu:vivid
 
 before_script:
   - apt-get update
-  - apt-get install -y curl file build-essential libssl-dev python-pip
+  - apt-get install -y curl file build-essential libssl-dev python-pip unzip wget
   - pip install 'travis-cargo<0.2' --user && export PATH=$HOME/.local/bin:$PATH
   - export TRAVIS_JOB_ID=$CI_BUILD_ID
 

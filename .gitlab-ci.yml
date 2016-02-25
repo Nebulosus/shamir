@@ -17,33 +17,24 @@ variables:
 
 stages:
   - test
-  - coverage
   - publish
 
 test-stable:
   script:
     - curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- -y --disable-sudo
-    - travis-cargo build & travis-cargo test
+    - travis-cargo build && travis-cargo test && travis-cargo coveralls --no-sudo
 
 test-beta:
   allow_failure: true
   script:
     - curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- -y --disable-sudo --channel=beta
-    - travis-cargo build & travis-cargo test
+    - travis-cargo build && travis-cargo test
 
 test-nightly:
   allow_failure: true
   script:
     - curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- -y --disable-sudo --channel=nightly
-    - travis-cargo build & travis-cargo test
-
-
-coverage:
-  stage: coverage
-  script:
-    - curl -sSf https://static.rust-lang.org/rustup.sh | sh -s -- -y --disable-sudo
-    - travis-cargo coveralls --no-sudo
-
+    - travis-cargo build && travis-cargo test
 
 publish:
   stage: publish

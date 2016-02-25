@@ -7,7 +7,7 @@ before_script:
 
 cache:
   untracked: true
-  key: "$CI_BUILD_NAME"
+  key: $CI_BUILD_STAGE/$CI_BUILD_REF_NAME
   paths:
     - $HOME/.cargo
     - $CI_PROJECT_DIR/target

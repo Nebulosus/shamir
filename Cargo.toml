@@ -9,3 +9,4 @@ license = "MIT"
 
 [dependencies]
 rand = "0.3"
+error-chain = {version = "0.9", default-features = false}

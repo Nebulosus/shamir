@@ -7,5 +7,9 @@ homepage = "https://github.com/Nebulosus/shamir"
 repository = "https://github.com/Nebulosus/shamir.git"
 license = "MIT"
 
-[dependencies]
+[target.'cfg(not(target_env = "sgx"))'.dependencies]
+sgx_tstd = { path = "../../sgx_tstd" }
+sgx_rand = { path = "../../sgx_rand" }
+
+[target.'cfg(target_env = "sgx")'.dependencies]
 rand = "0.3"

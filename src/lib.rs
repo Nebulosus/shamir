@@ -1,3 +1,14 @@
+#![cfg_attr(not(target_env = "sgx"), no_std)]
+#![cfg_attr(target_env = "sgx", feature(rustc_private))]
+
+#[cfg(not(target_env = "sgx"))]
+#[macro_use]
+extern crate sgx_tstd as std;
+extern crate sgx_rand as rand;
+use std::vec::Vec;
+use std::string::{String, ToString};
+
+#[cfg(target_env = "sgx")]
 extern crate rand;
 
 use rand::{Rng, thread_rng};

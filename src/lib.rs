@@ -122,7 +122,7 @@ impl SecretData {
         SecretData {
             secret_data: Some(secret.to_string()),
             // threshold: threshold,
-            coefficients: coefficients,
+            coefficients,
         }
     }
 
@@ -141,13 +141,13 @@ impl SecretData {
         Ok(share_bytes)
     }
 
-    pub fn is_valid_share(&self, share: &Vec<u8>) -> bool {
+    pub fn is_valid_share(&self, share: &[u8]) -> bool {
         let id = share[0];
         // let share2 = share[1..];
-        return match self.get_share(id) {
-            Ok(s) => *share == s,
+        match self.get_share(id) {
+            Ok(s) => s == share,
             _ => false,
-        };
+        }
     }
 
     pub fn recover_secret(threshold: u8, shares: Vec<Vec<u8>>) -> Option<String> {
@@ -168,7 +168,7 @@ impl SecretData {
                 return None;
             }
 
-            xs.push(share[0].clone());
+            xs.push(share[0].to_owned());
         }
         // println!("xs is {:?}", xs);
         let mut mycoefficients: Vec<String> = vec![];
@@ -179,7 +179,7 @@ impl SecretData {
         for byte_to_use in 0..rounds {
             let mut fxs: Vec<u8> = vec![];
             for share in shares.clone() {
-                fxs.push(share[1..][byte_to_use].clone());
+                fxs.push(share[1..][byte_to_use]);
             }
 
             match SecretData::full_lagrange(&xs, &fxs) {
@@ -210,14 +210,14 @@ impl SecretData {
         let mut x_i: u8 = 1;
 
         for c in coefficient_bytes {
-            accumulator = SecretData::gf256_add(&accumulator, &SecretData::gf256_mul(&c, &x_i));
-            x_i = SecretData::gf256_mul(&x_i, &id);
+            accumulator = SecretData::gf256_add(accumulator, SecretData::gf256_mul(c, x_i));
+            x_i = SecretData::gf256_mul(x_i, id);
         }
 
         Ok(accumulator)
     }
 
-    fn full_lagrange(xs: &Vec<u8>, fxs: &Vec<u8>) -> Option<Vec<u8>> {
+    fn full_lagrange(xs: &[u8], fxs: &[u8]) -> Option<Vec<u8>> {
         let mut returned_coefficients: Vec<u8> = vec![];
         let len = fxs.len();
         for i in 0..len {
@@ -228,9 +228,9 @@ impl SecretData {
                     continue;
                 }
 
-                let denominator = SecretData::gf256_sub(&xs[i], &xs[j]);
-                let first_term = SecretData::gf256_checked_div(&xs[j], &denominator);
-                let second_term = SecretData::gf256_checked_div(&1, &denominator);
+                let denominator = SecretData::gf256_sub(xs[i], xs[j]);
+                let first_term = SecretData::gf256_checked_div(xs[j], denominator);
+                let second_term = SecretData::gf256_checked_div(1, denominator);
                 match (first_term, second_term) {
                     (Some(a), Some(b)) => {
                         let this_term = vec![a, b];
@@ -241,7 +241,7 @@ impl SecretData {
                 };
             }
             if fxs.len() + 1 >= i {
-                this_polynomial = SecretData::multiply_polynomials(&this_polynomial, &vec![fxs[i]])
+                this_polynomial = SecretData::multiply_polynomials(&this_polynomial, &[fxs[i]])
             }
             // this_polynomial = _multiply_polynomials(this_polynomial, [fxs[i]]) if fxs[i]
             returned_coefficients =
@@ -252,46 +252,46 @@ impl SecretData {
     }
 
     #[inline]
-    fn gf256_add(a: &u8, b: &u8) -> u8 {
+    fn gf256_add(a: u8, b: u8) -> u8 {
         a ^ b
     }
 
     #[inline]
-    fn gf256_sub(a: &u8, b: &u8) -> u8 {
+    fn gf256_sub(a: u8, b: u8) -> u8 {
         SecretData::gf256_add(a, b)
     }
 
     #[inline]
-    fn gf256_mul(a: &u8, b: &u8) -> u8 {
-        if *a == 0 || *b == 0 {
+    fn gf256_mul(a: u8, b: u8) -> u8 {
+        if a == 0 || b == 0 {
             0
         } else {
-            GF256_EXP
-                [((GF256_LOG[*a as usize] as u16 + GF256_LOG[*b as usize] as u16) % 255) as usize]
+            GF256_EXP[((u16::from(GF256_LOG[a as usize]) + u16::from(GF256_LOG[b as usize])) % 255)
+                as usize]
         }
     }
 
     #[inline]
-    fn gf256_checked_div(a: &u8, b: &u8) -> Option<u8> {
-        if *a == 0 {
-            return Some(0);
-        } else if *b == 0 {
-            return None;
+    fn gf256_checked_div(a: u8, b: u8) -> Option<u8> {
+        if a == 0 {
+            Some(0)
+        } else if b == 0 {
+            None
         } else {
-            let a_log = GF256_LOG[*a as usize] as i16;
-            let b_log = GF256_LOG[*b as usize] as i16;
+            let a_log = i16::from(GF256_LOG[a as usize]);
+            let b_log = i16::from(GF256_LOG[b as usize]);
 
             let mut diff = a_log - b_log;
 
             if diff < 0 {
-                diff = 255 + diff;
+                diff += 255;
             }
             Some(GF256_EXP[(diff % 255) as usize])
         }
     }
 
     #[inline]
-    fn multiply_polynomials(a: &Vec<u8>, b: &Vec<u8>) -> Vec<u8> {
+    fn multiply_polynomials(a: &[u8], b: &[u8]) -> Vec<u8> {
         let mut resultterms: Vec<u8> = vec![];
 
         let mut termpadding: Vec<u8> = vec![];
@@ -299,7 +299,7 @@ impl SecretData {
         for bterm in b {
             let mut thisvalue = termpadding.clone();
             for aterm in a {
-                thisvalue.push(SecretData::gf256_mul(&aterm, &bterm));
+                thisvalue.push(SecretData::gf256_mul(*aterm, *bterm));
             }
             resultterms = SecretData::add_polynomials(&resultterms, &thisvalue);
             termpadding.push(0);
@@ -308,20 +308,20 @@ impl SecretData {
     }
 
     #[inline]
-    fn add_polynomials(a: &Vec<u8>, b: &Vec<u8>) -> Vec<u8> {
-        let mut a = a.clone();
-        let mut b = b.clone();
+    fn add_polynomials(a: &[u8], b: &[u8]) -> Vec<u8> {
+        let mut a = a.to_owned();
+        let mut b = b.to_owned();
         if a.len() < b.len() {
-            let mut t = vec![0; (b.len() - a.len())];
+            let mut t = vec![0; b.len() - a.len()];
             a.append(&mut t);
         } else if a.len() > b.len() {
-            let mut t = vec![0; (a.len() - b.len())];
+            let mut t = vec![0; a.len() - b.len()];
             b.append(&mut t);
         }
         let mut results: Vec<u8> = vec![];
 
         for i in 0..a.len() {
-            results.push(SecretData::gf256_add(&a[i], &b[i]));
+            results.push(SecretData::gf256_add(a[i], b[i]));
         }
         results
     }

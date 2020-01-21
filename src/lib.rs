@@ -44,12 +44,6 @@ mod tests {
 
     #[test]
     fn it_can_recover_secret() {
-        // let secret_data = SecretData::with_secret("Hello, world!", 3);
-
-        // let s1 = secret_data.get_share(1);
-        // let s2 = secret_data.get_share(2);
-        // let s3 = secret_data.get_share(3);
-
         let s1 = vec![1, 184, 190, 251, 87, 232, 39, 47, 17, 4, 36, 190, 245];
         let s2 = vec![2, 231, 107, 52, 138, 34, 221, 9, 221, 67, 79, 33, 16];
         let s3 = vec![3, 23, 176, 163, 177, 165, 218, 113, 163, 53, 7, 251, 196];
@@ -100,7 +94,6 @@ mod tests {
 }
 
 pub struct SecretData {
-    // threshold: u8,
     pub secret_data: Option<String>,
     pub coefficients: Vec<Vec<u8>>,
 }
@@ -121,7 +114,6 @@ impl SecretData {
 
         SecretData {
             secret_data: Some(secret.to_string()),
-            // threshold: threshold,
             coefficients,
         }
     }
@@ -143,7 +135,6 @@ impl SecretData {
 
     pub fn is_valid_share(&self, share: &[u8]) -> bool {
         let id = share[0];
-        // let share2 = share[1..];
         match self.get_share(id) {
             Ok(s) => s == share,
             _ => false,
@@ -170,9 +161,7 @@ impl SecretData {
 
             xs.push(share[0].to_owned());
         }
-        // println!("xs is {:?}", xs);
         let mut mycoefficients: Vec<String> = vec![];
-        // let mut mysecretdata = String::from("");
         let mut mysecretdata: Vec<u8> = vec![];
         let rounds = shares[0].len() - 1;
 
@@ -198,7 +187,6 @@ impl SecretData {
                 None
             }
         }
-        // Some(mysecretdata)
     }
 
     fn accumulate_share_bytes(id: u8, coefficient_bytes: Vec<u8>) -> Result<u8, &'static str> {
@@ -243,10 +231,8 @@ impl SecretData {
             if fxs.len() + 1 >= i {
                 this_polynomial = SecretData::multiply_polynomials(&this_polynomial, &[fxs[i]])
             }
-            // this_polynomial = _multiply_polynomials(this_polynomial, [fxs[i]]) if fxs[i]
             returned_coefficients =
                 SecretData::add_polynomials(&returned_coefficients, &this_polynomial);
-            // returnedcoefficients = _add_polynomials(returnedcoefficients, this_polynomial)
         }
         Some(returned_coefficients)
     }

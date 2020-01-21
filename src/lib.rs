@@ -1,6 +1,6 @@
 extern crate rand;
 
-use rand::{thread_rng, Rng};
+use rand::{thread_rng, RngCore};
 
 #[cfg(test)]
 mod tests {

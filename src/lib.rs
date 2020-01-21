@@ -15,17 +15,17 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn it_rejects_share_id_under_1() {
         let secret_data = SecretData::with_secret("Hello, world!", 3);
-        let _ = secret_data.get_share(0);
+        let d = secret_data.get_share(0);
+        assert!(d.is_err());
     }
 
     #[test]
     fn it_issues_shares() {
         let secret_data = SecretData::with_secret("Hello, world!", 3);
 
-        let s1 = secret_data.get_share(1);
+        let s1 = secret_data.get_share(1).unwrap();
         println!("Share: {:?}", s1);
         assert!(secret_data.is_valid_share(&s1));
     }
@@ -34,11 +34,11 @@ mod tests {
     fn it_repeatedly_issues_shares() {
         let secret_data = SecretData::with_secret("Hello, world!", 3);
 
-        let s1 = secret_data.get_share(1);
+        let s1 = secret_data.get_share(1).unwrap();
         println!("Share: {:?}", s1);
         assert!(secret_data.is_valid_share(&s1));
 
-        let s2 = secret_data.get_share(1);
+        let s2 = secret_data.get_share(1).unwrap();
         assert_eq!(s1, s2);
     }
 
@@ -63,11 +63,11 @@ mod tests {
     fn it_can_recover_a_generated_secret() {
         let secret_data = SecretData::with_secret("Hello, world!", 3);
 
-        let s1 = secret_data.get_share(1);
+        let s1 = secret_data.get_share(1).unwrap();
         println!("s1: {:?}", s1);
-        let s2 = secret_data.get_share(2);
+        let s2 = secret_data.get_share(2).unwrap();
         println!("s2: {:?}", s2);
-        let s3 = secret_data.get_share(3);
+        let s3 = secret_data.get_share(3).unwrap();
         println!("s3: {:?}", s3);
 
         let new_secret = SecretData::recover_secret(3, vec![s1, s2, s3]).unwrap();
@@ -84,11 +84,11 @@ mod tests {
         let secret_data = SecretData::with_secret("Hello World!", 5);
 
         let shares = vec![
-            secret_data.get_share(1),
-            secret_data.get_share(2),
-            secret_data.get_share(3),
-            secret_data.get_share(4),
-            secret_data.get_share(5),
+            secret_data.get_share(1).unwrap(),
+            secret_data.get_share(2).unwrap(),
+            secret_data.get_share(3).unwrap(),
+            secret_data.get_share(4).unwrap(),
+            secret_data.get_share(5).unwrap(),
         ];
 
         let recovered = try_recover(5, &shares);
@@ -126,25 +126,28 @@ impl SecretData {
         }
     }
 
-    pub fn get_share(&self, id: u8) -> Vec<u8> {
-        if id < 1 {
-            // Don't need to check for id > 255 because u8 can't be
-            panic!("share id must be between 1 and 255");
+    pub fn get_share(&self, id: u8) -> Result<Vec<u8>, &'static str> {
+        if id == 0 {
+            return Err("share id must be between 1 and 255");
         }
         let mut share_bytes: Vec<u8> = vec![];
         let coefficients = self.coefficients.clone();
         for coefficient in coefficients {
-            share_bytes.push(SecretData::accumulate_share_bytes(id, coefficient));
+            let b = try!(SecretData::accumulate_share_bytes(id, coefficient));
+            share_bytes.push(b);
         }
 
         share_bytes.insert(0, id);
-        share_bytes
+        Ok(share_bytes)
     }
 
     pub fn is_valid_share(&self, share: &Vec<u8>) -> bool {
         let id = share[0];
         // let share2 = share[1..];
-        *share == self.get_share(id)
+        return match self.get_share(id) {
+            Ok(s) => *share == s,
+            _ => false,
+        };
     }
 
     pub fn recover_secret(threshold: u8, shares: Vec<Vec<u8>>) -> Option<String> {
@@ -179,10 +182,13 @@ impl SecretData {
                 fxs.push(share[1..][byte_to_use].clone());
             }
 
-            let resulting_poly: Vec<u8> = SecretData::full_lagrange(&xs, &fxs);
-
-            mycoefficients.push(String::from_utf8_lossy(&resulting_poly[..]).to_string());
-            mysecretdata.push(resulting_poly[0]);
+            match SecretData::full_lagrange(&xs, &fxs) {
+                None => return None,
+                Some(resulting_poly) => {
+                    mycoefficients.push(String::from_utf8_lossy(&resulting_poly[..]).to_string());
+                    mysecretdata.push(resulting_poly[0]);
+                }
+            }
         }
 
         match String::from_utf8(mysecretdata) {
@@ -195,10 +201,9 @@ impl SecretData {
         // Some(mysecretdata)
     }
 
-    fn accumulate_share_bytes(id: u8, coefficient_bytes: Vec<u8>) -> u8 {
-        if id < 1 {
-            // Don't need to check for id > 255 because u8 can't be
-            panic!("share id must be between 1 and 255");
+    fn accumulate_share_bytes(id: u8, coefficient_bytes: Vec<u8>) -> Result<u8, &'static str> {
+        if id == 0 {
+            return Err("share id must be between 1 and 255");
         }
         let mut accumulator: u8 = 0;
 
@@ -209,10 +214,10 @@ impl SecretData {
             x_i = SecretData::gf256_mul(&x_i, &id);
         }
 
-        accumulator
+        Ok(accumulator)
     }
 
-    fn full_lagrange(xs: &Vec<u8>, fxs: &Vec<u8>) -> Vec<u8> {
+    fn full_lagrange(xs: &Vec<u8>, fxs: &Vec<u8>) -> Option<Vec<u8>> {
         let mut returned_coefficients: Vec<u8> = vec![];
         let len = fxs.len();
         for i in 0..len {
@@ -224,13 +229,16 @@ impl SecretData {
                 }
 
                 let denominator = SecretData::gf256_sub(&xs[i], &xs[j]);
-                let this_term = vec![
-                    SecretData::gf256_div(&xs[j], &denominator),
-                    SecretData::gf256_div(&1, &denominator),
-                ];
-
-                this_polynomial = SecretData::multiply_polynomials(&this_polynomial, &this_term);
-                // panic!("wait");
+                let first_term = SecretData::gf256_checked_div(&xs[j], &denominator);
+                let second_term = SecretData::gf256_checked_div(&1, &denominator);
+                match (first_term, second_term) {
+                    (Some(a), Some(b)) => {
+                        let this_term = vec![a, b];
+                        this_polynomial =
+                            SecretData::multiply_polynomials(&this_polynomial, &this_term);
+                    }
+                    (_, _) => return None,
+                };
             }
             if fxs.len() + 1 >= i {
                 this_polynomial = SecretData::multiply_polynomials(&this_polynomial, &vec![fxs[i]])
@@ -240,7 +248,7 @@ impl SecretData {
                 SecretData::add_polynomials(&returned_coefficients, &this_polynomial);
             // returnedcoefficients = _add_polynomials(returnedcoefficients, this_polynomial)
         }
-        returned_coefficients
+        Some(returned_coefficients)
     }
 
     #[inline]
@@ -264,11 +272,11 @@ impl SecretData {
     }
 
     #[inline]
-    fn gf256_div(a: &u8, b: &u8) -> u8 {
+    fn gf256_checked_div(a: &u8, b: &u8) -> Option<u8> {
         if *a == 0 {
-            0
+            return Some(0);
         } else if *b == 0 {
-            panic!("Divide by 0");
+            return None;
         } else {
             let a_log = GF256_LOG[*a as usize] as i16;
             let b_log = GF256_LOG[*b as usize] as i16;
@@ -278,7 +286,7 @@ impl SecretData {
             if diff < 0 {
                 diff = 255 + diff;
             }
-            GF256_EXP[(diff % 255) as usize]
+            Some(GF256_EXP[(diff % 255) as usize])
         }
     }
 
@@ -318,6 +326,7 @@ impl SecretData {
         results
     }
 }
+
 static GF256_EXP: [u8; 256] = [
     0x01, 0x03, 0x05, 0x0f, 0x11, 0x33, 0x55, 0xff, 0x1a, 0x2e, 0x72, 0x96, 0xa1, 0xf8, 0x13, 0x35,
     0x5f, 0xe1, 0x38, 0x48, 0xd8, 0x73, 0x95, 0xa4, 0xf7, 0x02, 0x06, 0x0a, 0x1e, 0x22, 0x66, 0xaa,

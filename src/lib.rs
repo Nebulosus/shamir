@@ -98,6 +98,12 @@ pub struct SecretData {
     pub coefficients: Vec<Vec<u8>>,
 }
 
+#[derive(Debug)]
+pub enum ShamirError {
+    /// The number of shares must be between 1 and 255
+    InvalidShareCount,
+}
+
 impl SecretData {
     pub fn with_secret(secret: &str, threshold: u8) -> SecretData {
         let mut coefficients: Vec<Vec<u8>> = vec![];
@@ -118,9 +124,9 @@ impl SecretData {
         }
     }
 
-    pub fn get_share(&self, id: u8) -> Result<Vec<u8>, &'static str> {
+    pub fn get_share(&self, id: u8) -> Result<Vec<u8>, ShamirError> {
         if id == 0 {
-            return Err("share id must be between 1 and 255");
+            return Err(ShamirError::InvalidShareCount);
         }
         let mut share_bytes: Vec<u8> = vec![];
         let coefficients = self.coefficients.clone();
@@ -189,9 +195,9 @@ impl SecretData {
         }
     }
 
-    fn accumulate_share_bytes(id: u8, coefficient_bytes: Vec<u8>) -> Result<u8, &'static str> {
+    fn accumulate_share_bytes(id: u8, coefficient_bytes: Vec<u8>) -> Result<u8, ShamirError> {
         if id == 0 {
-            return Err("share id must be between 1 and 255");
+            return Err(ShamirError::InvalidShareCount);
         }
         let mut accumulator: u8 = 0;
 

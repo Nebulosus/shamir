@@ -8,4 +8,4 @@ repository = "https://github.com/Nebulosus/shamir.git"
 license = "MIT"
 
 [dependencies]
-rand = "0.7.3"
+rand = "0.8.5"

@@ -131,7 +131,7 @@ impl SecretData {
         let mut share_bytes: Vec<u8> = vec![];
         let coefficients = self.coefficients.clone();
         for coefficient in coefficients {
-            let b = try!(SecretData::accumulate_share_bytes(id, coefficient));
+            let b = SecretData::accumulate_share_bytes(id, coefficient)?;
             share_bytes.push(b);
         }
 
